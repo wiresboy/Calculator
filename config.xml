@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://mit.edu/Calculator" version="2.0.0" viewmodes="maximized">
+    <tizen:application id="E0OKKH9ZYi.Calculator" package="E0OKKH9ZYi" required_version="4.0"/>
+    <author email="bvjohn@mit.edu">Brandon John</author>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <icon src="com.samsung.d-calculator.png"/>
+    <name>Calculator</name>
+    <tizen:profile name="wearable"/>
+    <tizen:setting background-support="disable" encryption="disable" hwkey-event="enable"/>
+</widget>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width,height=device-height,user-scalable=no">
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" type="text/css" href="./css/style.css"/>
+    <meta name="description" content="Calc"/>
+    <title>Calculator</title>
+</head>
+<body>
+    <!-- Application wrapper-->
+    <div class="app-wrapper">
+        <!-- Display area -->
+        <div id="screen">
+            <div id="overflow"></div>
+            <div id="display" valign="middle" class="empty-result">
+                <div id="equation"></div>
+                <div id="result"><span id="resultvalue"></span></div>
+            </div>
+        </div>
+        <!-- Numpad buttons -->
+        <div id="numpad">
+            <div id="key_c" class="key col-4 c darkblue"></div>
+            <div id="key_div" class="key col-4 darkblue"></div>
+            <div id="key_mul" class="key col-4 darkblue"></div>
+            <div id="key_del" class="key long-tap-repeat col-4 darkblue"></div>
+
+            <div id="key_7" class="key col-4"></div>
+            <div id="key_8" class="key col-4"></div>
+            <div id="key_9" class="key col-4"></div>
+            <div id="key_sub" class="key col-4 darkblue"></div>
+
+            <div id="key_4" class="key col-4"></div>
+            <div id="key_5" class="key col-4"></div>
+            <div id="key_6" class="key col-4"></div>
+            <div id="key_add" class="key col-4 darkblue"></div>
+
+            <div id="key_1" class="key col-4"></div>
+            <div id="key_2" class="key col-4"></div>
+            <div id="key_3" class="key col-4"></div>
+            <div id="key_bracket" class="key col-4 darkblue"></div>
+
+            <div id="key_dec" class="key col-3 left"></div>
+            <div id="key_0" class="key col-3 center"></div>
+            <div id="key_sign" class="key col-3 right"></div>
+
+            <div id="key_eql" class="key equal col-1"></div>
+        </div>
+        <div id="advanced_numpad" class="hidden">
+            <div id="key_c" class="key col-4 c darkblue"></div>
+            <div id="key_rad_deg" class="key col-4 darkblue disabled">rad</div>
+            <div id="key_x_factorial" class="key col-4 disabled">x!</div>            
+            <div id="key_del" class="key long-tap-repeat col-4 darkblue"></div>
+            
+            <div id="key_sin" class="key col-4">sin</div>
+            <div id="key_cos" class="key col-4">cos</div>
+            <div id="key_tan" class="key col-4">tan</div>
+            <div id="key_ln" class="key col-4">ln</div>
+
+            <div id="key_arcsin" class="key col-4 super">sin<sup>-1</sup></div>
+            <div id="key_arccos" class="key col-4 super">cos<sup>-1</sup></div>
+            <div id="key_arctan" class="key col-4 super">tan<sup>-1</sup></div>
+            <div id="key_log" class="key col-4">log</div>
+            
+            <div id="key_inverse" class="key col-4 super disabled">x<sup>-1</sup></div>
+            <div id="key_x_2" class="key col-4 disabled">x²</div>
+            <div id="key_x_3" class="key col-4 disabled">x³</div>
+            <div id="key_x_y" class="key col-4 super disabled">x<sup>y</sup></div>
+
+            <div id="key_2exp" class="key col-3 left super">2<sup>x</sup></div>
+            <div id="key_exp" class="key col-3 center super">e<sup>x</sup></div>
+            <div id="key_sqrt" class="key col-3 right">√</div>
+
+            <div id="key_eql" class="key equal col-1"></div>
+        </div>
+    </div>
+    <script src="js/core/core.js" data-main="js/app.js"></script>
+</body>
+</html>

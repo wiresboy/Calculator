@@ -1,0 +1,705 @@
+/*
+ *      Copyright (c) 2014 Samsung Electronics Co., Ltd
+ *
+ *      Licensed under the Flora License, Version 1.1 (the "License");
+ *      you may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *              http://floralicense.org/license/
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an "AS IS" BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ */
+
+/*global define, document, window,tizen, console*/
+
+/**
+ * Main view module.
+ *
+ * @module views/main
+ * @requires {@link models/errors}
+ * @requires {@link models/model}
+ * @namespace views/main
+ */
+define({
+    name: 'views/main',
+    requires: [
+        'models/errors',
+        'models/model'
+    ],
+    def: function main(errors, model) {
+        'use strict';
+
+        /**
+         * Delay after which longtap event is executed.
+         *
+         * @memberof views/main
+         * @private
+         * @const {number}
+         */
+        var LONGTAP_DELAY = 400,
+
+            /**
+             * Interval of processing longtap event.
+             *
+             * @memberof views/main
+             * @private
+             * @const {number}
+             */
+            LONGTAP_REPEAT_INTERVAL = 20,
+
+            /**
+             * Maximum count of digits in the equation.
+             *
+             * @memberof views/main
+             * @private
+             * @const {number}
+             */
+            MAX_DIGITS = 9,
+
+            /**
+             * Minimum number of digits in the equation after which font is
+             * decreased.
+             *
+             * @memberof views/main
+             * @private
+             * @const {number}
+             */
+            SMALL_FONT_THRESHOLD = 7,
+
+            /**
+             * Separator.
+             *
+             * @memberof views/main
+             * @private
+             * @const {string}
+             */
+            SEPARATOR = ',',
+
+            /**
+             * Container for timers of longtap events.
+             *
+             * @memberof views/main
+             * @private
+             * @const {object}
+             */
+            longTapRepeatTimers = {},
+
+            /**
+             * Object that maps calculator signs to the HTML version.
+             *
+             * @memberof views/main
+             * @private
+             * @type {object}
+             */
+            operatorDisplays = {
+                '+': '+',
+                '-': '&minus;',
+                '*': '&times;',
+                '/': '&divide;',
+                '^': '^'
+            },
+
+            /**
+             * Object that maps strings to the math operators.
+             *
+             * @memberof views/main
+             * @private
+             * @type {object}
+             */
+            operatorKeys = {
+                'add': '+',
+                'sub': '-',
+                'mul': '*',
+                'div': '/',
+                'x_y': '^'
+            },
+            
+            
+            functionDisplays = {
+        		'E': 'ERR',
+        		'Math.sqrt('      : '√(',
+        		'Math.sin('       : 'sin(', 
+        		'Math.cos('       : 'cos(', 
+        		'Math.tan('       : 'tan(', 
+        		'Math.asin('      : 'sin<sup>-1</sup>(', 
+        		'Math.acos('      : 'cos<sup>-1</sup>(', 
+        		'Math.atan('      : 'tan<sup>-1</sup>(', 
+        		'Math.pow(2,'     : '2^(',
+        		'Math.pow(Math.E,': 'e^(',
+        		'Math.log('       : 'ln(', 
+        		'Math.log10('     : 'log<sub>10</sub>('
+        	},
+            /** 
+             * Like operator keys, but only for 1 parameter functions. To be implemented later.
+             * 
+             * @memberof views/main
+             * @private
+             * @type {object}
+             */
+            functionKeys = { //when updating make sure to update "FUNCTIONS" in model.js
+        		'sin': 'Math.sin(',
+        		'cos': 'Math.cos(',
+        		'tan': 'Math.tan(',
+        		'arcsin': 'Math.asin(',
+        		'arccos': 'Math.acos(',
+        		'arctan': 'Math.atan(',
+        		'rad_deg': 'E',
+        		'ln': 'Math.log(',
+        		'log': 'Math.log10(',
+        		'inverse': 'E',
+        		'sqrt': 'Math.sqrt(',
+        		'2exp': 'Math.pow(2,',
+        		'exp': 'Math.pow(Math.E,',
+        		'x_2': 'E',
+        		'x_3': 'E',
+        		'x_factorial': 'E'
+        	},
+
+            /**
+             * Result element.
+             *
+             * @memberof views/main
+             * @private
+             * @type {HTMLElement}
+             */
+            resultElement = null,
+
+            /**
+             * Result value element.
+             *
+             * @memberof views/main
+             * @private
+             * @type {HTMLElement}
+             */
+            resultValueElement = null,
+
+            /**
+             * Equation element.
+             *
+             * @memberof views/main
+             * @private
+             * @type {HTMLElement}
+             */
+            equationElement = null,
+
+            /**
+             * Display element.
+             *
+             * @memberof views/main
+             * @private
+             * @type {HTMLElement}
+             */
+            displayElement = null,
+
+            /**
+             * Error flag.
+             *
+             * @memberof views/main
+             * @private
+             * @type {boolean}
+             */
+            error = false,
+
+            /**
+             * Calculation success flag.
+             *
+             * @memberof views/main
+             * @private
+             * @type {boolean}
+             */
+            result = false;
+
+        /**
+         * Handles touch events.
+         * Disables multitouch.
+         *
+         * @memberof views/main
+         * @private
+         * @param {Event} ev
+         */
+        function filterTap(ev) {
+            // disable multitouch
+            if (ev.touches.length > 1) {
+                ev.stopPropagation();
+                ev.preventDefault();
+            }
+        }
+
+        /**
+         * Clears registered timers.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} key
+         */
+        function clearLongTapRepeatTimers(key) {
+            if (longTapRepeatTimers['start' + key]) {
+                window.clearTimeout(longTapRepeatTimers['start' + key]);
+                longTapRepeatTimers['start' + key] = null;
+            }
+
+            if (longTapRepeatTimers['repeat' + key]) {
+                window.clearInterval(longTapRepeatTimers['repeat' + key]);
+                longTapRepeatTimers['repeat' + key] = null;
+            }
+        }
+
+        /**
+         * Returns true for result, false for empty result.
+         *
+         * @memberof views/main
+         * @private
+         * @returns {boolean}
+         */
+        function isResultVisible() {
+            return result;
+        }
+
+        /**
+         * Clears result element.
+         *
+         * @memberof views/main
+         * @private
+         */
+        function clear() {
+            equationElement.classList.remove('top');
+            resultValueElement.innerHTML = '';
+            displayElement.classList.add('empty-result');
+        }
+
+        /**
+         * Clears result element and flags.
+         *
+         * @memberof views/main
+         * @private
+         */
+        function clearResult() {
+            clear();
+            result = false;
+            error = false;
+        }
+
+
+        /**
+         * Shows string in result element.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} result
+         * @param {boolean} error Error flag.
+         */
+        function show(result, error) {
+            if (result === '') {
+                return clear();
+            }
+
+            equationElement.classList.add('top');
+            displayElement.classList.remove('empty-result');
+
+            if (error === true) {
+                resultElement.classList.add('error');
+                if (result.length > MAX_DIGITS) {
+                    resultElement.classList.add('small');
+                } else {
+                    resultElement.classList.remove('small');
+                }
+            } else {
+                resultElement.classList.remove('error');
+                resultElement.classList.remove('small');
+            }
+
+            resultValueElement.innerHTML = result.replace(/-/g, '&minus;');
+        }
+
+        /**
+         * Shows error in result element.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} error
+         */
+        function showError(error) {
+            show(error, true);
+            error = true;
+        }
+
+        /**
+         * Handles pressing digit button.
+         *
+         * @memberof views/main
+         * @private
+         * @param {object} key
+         */
+        function pushDigits(key) {
+            if (!model.addDigit(key)) {
+                showError('Only 10 digits available');
+            }
+        }
+
+        /**
+         * Adds separators to matched string.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} match
+         * @param {string} sign
+         * @param {string} p1
+         * @returns {string}
+         */
+        function regexpReplacer(match, sign, p1) {
+            var p1array = null;
+
+            p1 = p1.split('').reverse().join('');
+            p1array = p1.match(new RegExp('.{1,3}', 'g'));
+            p1 = p1array.join(SEPARATOR);
+            p1 = p1.split('').reverse().join('');
+
+            return sign + p1;
+        }
+
+
+        /**
+         * Adds separators to the specified equation.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} equationString
+         * @returns {string} Equation with separators.
+         */
+        function addSeparators(equationString) {
+            var negative = false;
+
+            if (model.isNegativeComponent(equationString)) {
+                equationString = RegExp.$2;
+                negative = true;
+            }
+            equationString = equationString.replace(
+                new RegExp('^(\\-?)([0-9]+)', 'g'),
+                regexpReplacer
+            );
+            return negative ? '(-' + equationString + ')' : equationString;
+        }
+
+        /**
+         * Shows result in result element.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} res Result.
+         * @param {boolean} err Error flag.
+         */
+        function showResult(res, err) {
+            error = err || false;
+            if (error) {
+                error = true;
+            }
+            show(res, err);
+            result = true;
+        }
+
+        /**
+         * Calculates equation and displays result on the screen.
+         *
+         * @memberof views/main
+         * @private
+         */
+        function calculate() {
+            var calculationResult = '';
+
+            try {
+                calculationResult = model.calculate();
+                calculationResult = addSeparators(calculationResult);
+                showResult('=&nbsp;' + calculationResult);
+            } catch (e) {
+                if (e instanceof errors.EquationInvalidFormatError) {
+                    showResult('Wrong format');
+                } else if (e instanceof errors.CalculationError) {
+                    showResult('Invalid operation');
+                } else if (e instanceof errors.InfinityError) {
+                    showResult(
+                        (e.positive ? '' : '&minus;') + '&infin;'
+                    );
+                } else {
+                    showError('Unknown error.');
+                    console.warn(e);
+                }
+            }
+        }
+
+        /**
+         * Displays given equation.
+         *
+         * @memberof views/main
+         * @private
+         * @param {string} equation
+         */
+        function showEquation(equation) {
+            var e = 0,
+                element = null,
+                elementText = null,
+                span = null,
+                length = 0;
+
+            equationElement.innerHTML = '';
+
+            length = equation.length;
+            for (e = 0; e < length; e += 1) {
+                element = equation[e];
+                span = document.createElement('span');
+                elementText = element;
+                if (Object.keys(operatorDisplays).indexOf(element) !== -1) {
+                    span.className = 'operator';
+                    elementText = operatorDisplays[element];
+                } else if (Object.keys(functionDisplays).indexOf(element) !== -1) {
+                    span.className = 'function';
+                    elementText = functionDisplays[element];
+                } else {
+                    elementText = addSeparators(elementText);
+                }
+                elementText = elementText.replace(/-/g, '&minus;');
+                span.innerHTML = elementText;
+                equationElement.appendChild(span);
+            }
+
+            if (equation[0] && equation[0].length >= SMALL_FONT_THRESHOLD) {
+                equationElement.classList.add('medium');
+            } else {
+                equationElement.classList.remove('medium');
+            }
+        }
+
+        /**
+         * Refreshes equation field.
+         *
+         * @memberof views/main
+         * @private
+         */
+        function refreshEquation() {
+            showEquation(model.getEquation());
+        }
+
+        /**
+         * Handles press key event.
+         *
+         * @memberof views/main
+         * @private
+         * @param {object} key
+         */
+        function processKey(key) {
+            /*jshint maxcomplexity:11 */
+            var keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+            if (isResultVisible()) {
+                if ( //if not operator/delete/backspace/sign   -> so basically digits 
+                    Object.keys(operatorKeys).indexOf(key) === -1 &&
+                    Object.keys(functionKeys).indexOf(key) === -1 &&
+                    key !== 'del' &&
+                    key !== 'eql' &&
+                    key !== 'sign'
+                ) {
+                    model.resetEquation();
+                }
+            }
+            clearResult();
+            if (keys.indexOf(key) !== -1) {
+                pushDigits(key);
+            } else if (Object.keys(operatorKeys).indexOf(key) !== -1) {
+                model.addOperator(operatorKeys[key]);
+            } else if (Object.keys(functionKeys).indexOf(key) !== -1) {
+                model.addFunction(functionKeys[key]);
+            } else if (key === 'dec') {
+                model.addDecimal();
+            } else if (key === 'del') {
+                model.deleteLast();
+            } else if (key === 'c') {
+                model.resetEquation();
+            } else if (key === 'sign') {
+                model.changeSign();
+            } else if (key === 'bracket') {
+                model.addBracket();
+            }
+            if (key === 'eql' && !model.isEmpty()) {
+                calculate();
+            }
+            refreshEquation();
+        }
+
+        /**
+         * Registers view event listeners.
+         *
+         * @memberof views/main
+         * @private
+         */
+        function bindEvents() {
+            var numpad = document.getElementById('numpad');
+            var numpad_advanced = document.getElementById("advanced_numpad");
+
+            numpad.addEventListener('touchstart', function onTouchStart(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.add('press');
+                key = target.id.replace(/key_/, '');
+                if (classList.contains('long-tap-repeat')) {
+                    longTapRepeatTimers['start' + key] = window.setTimeout(
+                        function longtapStart() {
+                            processKey(key);
+                            longTapRepeatTimers['repeat' + key] =
+                                window.setInterval(
+                                    function longtapRepeat() {
+                                        processKey(key);
+                                    },
+                                    LONGTAP_REPEAT_INTERVAL
+                                );
+                        },
+                        LONGTAP_DELAY
+                    );
+                } else {
+                    processKey(key);
+                }
+
+            });
+            numpad.addEventListener('touchend', function onTouchEnd(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.remove('press');
+                key = target.id.replace(/key_/, '');
+                if (classList.contains('long-tap-repeat') &&
+                    !longTapRepeatTimers['repeat' + key]) {
+                    if (e.touches.length === 0) {
+                        processKey(key);
+                    }
+                }
+                clearLongTapRepeatTimers(key);
+            });
+            numpad.addEventListener('touchcancel', function onTouchCancel(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.remove('press');
+                key = target.id.replace(/key_/, '');
+                clearLongTapRepeatTimers(key);
+            });
+            
+            
+            numpad_advanced.addEventListener('touchstart', function onTouchStart(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.add('press');
+                key = target.id.replace(/key_/, '');
+                processKey(key);
+
+            });
+            numpad_advanced.addEventListener('touchend', function onTouchEnd(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.remove('press');
+                key = target.id.replace(/key_/, '');
+            });
+            numpad_advanced.addEventListener('touchcancel', function onTouchCancel(e) {
+                var key = '',
+                    target = e.target,
+                    classList = target.classList;
+
+                if (!classList.contains('key') &&
+                    !classList.contains('longkey')) {
+                    return;
+                }
+                classList.remove('press');
+                key = target.id.replace(/key_/, '');
+                clearLongTapRepeatTimers(key);
+            });
+            
+            
+            document.addEventListener('tizenhwkey', function onTizenHwKey(e) {
+                if (e.keyName === 'back') {
+                	model.undo();
+                    refreshEquation();
+                    /*try {
+                        tizen.application.getCurrentApplication().exit();
+                    } catch (ignore) {} */
+                }
+            });
+            
+            document.addEventListener("rotarydetent", function(ev)
+            {
+            	console.log(ev.detail.direction);
+            	
+                var numpad = document.getElementById('numpad');
+                var numpad_advanced = document.getElementById("advanced_numpad");
+                
+            	var direction = ev.detail.direction;
+            	if (direction === "CW") { // For now move directly between menus.
+            		numpad.classList.remove("hidden");
+            		numpad_advanced.classList.add("hidden");
+            	} else if (direction === "CCW") { 
+            		numpad.classList.add("hidden");
+            		numpad_advanced.classList.remove("hidden");
+            	}
+            });
+
+        }
+
+        /**
+         * Initializes UI module.
+         *
+         * Following actions are performed:
+         * - assignment of the most significant UI elements to the variables
+         * - events binding
+         * - preloading images
+         * - clearing error state
+         * - clearing result state
+         * - disabling multitouch
+         *
+         * @memberof views/main
+         * @public
+         */
+        function init() {
+            resultElement = document.getElementById('result');
+            resultValueElement = document.getElementById('resultvalue');
+            equationElement = document.getElementById('equation');
+            displayElement = document.getElementById('display');
+            bindEvents();
+            // disable multitouch
+            document.body.addEventListener('touchstart', filterTap, true);
+            document.body.addEventListener('touchend', filterTap, true);
+            refreshEquation();
+        }
+
+        return {
+            init: init
+        };
+    }
+});
