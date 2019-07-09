@@ -95,12 +95,28 @@ define({
              * @private
              * @type {object}
              */
-            operatorDisplays = {
+            displays = {
                 '+': '+',
                 '-': '&minus;',
                 '*': '&times;',
                 '/': '&divide;',
-                '^': '^'
+                '^': '^',
+                '^2'    : '²',
+                '^3'    : '³',
+                '^-1'   : '<sup>-1</sup>',
+                '!'     : '!',
+        		'sqrt(' : '√(',
+        		'sin('  : 'sin(', 
+        		'cos('  : 'cos(', 
+        		'tan('  : 'tan(', 
+        		'asin(' : 'sin<sup>-1</sup>(', 
+        		'acos(' : 'cos<sup>-1</sup>(', 
+        		'atan(' : 'tan<sup>-1</sup>(', 
+        		'pow(2,': '2^(',
+        		'pow(e,': 'e^(',
+        		'log('  : 'ln(', 
+        		'log10(': 'log<sub>10</sub>(',
+            	'E': 'ERR'
             },
 
             /**
@@ -117,22 +133,21 @@ define({
                 'div': '/',
                 'x_y': '^'
             },
+
+            /**
+             * Object that maps strings to the math operators.
+             *
+             * @memberof views/main
+             * @private
+             * @type {object}
+             */
+            modifierKeys = {
+                'x_2'      : '^2',
+                'x_3'      : '^3',
+                'inverse'  : '^-1',
+                'factorial': '!'
+            },
             
-            
-            functionDisplays = {
-        		'E': 'ERR',
-        		'Math.sqrt('      : '√(',
-        		'Math.sin('       : 'sin(', 
-        		'Math.cos('       : 'cos(', 
-        		'Math.tan('       : 'tan(', 
-        		'Math.asin('      : 'sin<sup>-1</sup>(', 
-        		'Math.acos('      : 'cos<sup>-1</sup>(', 
-        		'Math.atan('      : 'tan<sup>-1</sup>(', 
-        		'Math.pow(2,'     : '2^(',
-        		'Math.pow(Math.E,': 'e^(',
-        		'Math.log('       : 'ln(', 
-        		'Math.log10('     : 'log<sub>10</sub>('
-        	},
             /** 
              * Like operator keys, but only for 1 parameter functions. To be implemented later.
              * 
@@ -141,22 +156,18 @@ define({
              * @type {object}
              */
             functionKeys = { //when updating make sure to update "FUNCTIONS" in model.js
-        		'sin': 'Math.sin(',
-        		'cos': 'Math.cos(',
-        		'tan': 'Math.tan(',
-        		'arcsin': 'Math.asin(',
-        		'arccos': 'Math.acos(',
-        		'arctan': 'Math.atan(',
-        		'rad_deg': 'E',
-        		'ln': 'Math.log(',
-        		'log': 'Math.log10(',
-        		'inverse': 'E',
-        		'sqrt': 'Math.sqrt(',
-        		'2exp': 'Math.pow(2,',
-        		'exp': 'Math.pow(Math.E,',
-        		'x_2': 'E',
-        		'x_3': 'E',
-        		'x_factorial': 'E'
+        		'sin': 'sin(',
+        		'cos': 'cos(',
+        		'tan': 'tan(',
+        		'arcsin': 'asin(',
+        		'arccos': 'acos(',
+        		'arctan': 'atan(',
+        		'ln': 'log(',
+        		'log': 'log10(',
+        		'sqrt': 'sqrt(',
+        		'2exp': 'pow(2,',
+        		'exp': 'pow(e,',
+        		'rad_deg': 'E'
         	},
 
             /**
@@ -451,12 +462,9 @@ define({
                 element = equation[e];
                 span = document.createElement('span');
                 elementText = element;
-                if (Object.keys(operatorDisplays).indexOf(element) !== -1) {
+                if (Object.keys(displays).indexOf(element) !== -1) {
                     span.className = 'operator';
-                    elementText = operatorDisplays[element];
-                } else if (Object.keys(functionDisplays).indexOf(element) !== -1) {
-                    span.className = 'function';
-                    elementText = functionDisplays[element];
+                    elementText = displays[element];
                 } else {
                     elementText = addSeparators(elementText);
                 }
@@ -493,17 +501,18 @@ define({
             /*jshint maxcomplexity:11 */
             var keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-            if (isResultVisible()) {
-                if ( //if not operator/delete/backspace/sign   -> so basically digits 
-                    Object.keys(operatorKeys).indexOf(key) === -1 &&
-                    Object.keys(functionKeys).indexOf(key) === -1 &&
-                    key !== 'del' &&
-                    key !== 'eql' &&
-                    key !== 'sign'
-                ) {
-                    model.resetEquation();
-                }
+            //if not operator/delete/backspace/sign   -> so basically digits 
+            if (isResultVisible() && 
+            		Object.keys(operatorKeys).indexOf(key) === -1 &&
+            		Object.keys(functionKeys).indexOf(key) === -1 &&
+            		Object.keys(modifierKeys).indexOf(key) === -1 &&
+            		key !== 'del' &&
+            		key !== 'eql' &&
+            		key !== 'sign'
+            ) {
+            	model.resetEquation();
             }
+            
             clearResult();
             if (keys.indexOf(key) !== -1) {
                 pushDigits(key);
@@ -511,6 +520,8 @@ define({
                 model.addOperator(operatorKeys[key]);
             } else if (Object.keys(functionKeys).indexOf(key) !== -1) {
                 model.addFunction(functionKeys[key]);
+            } else if (Object.keys(modifierKeys).indexOf(key) !== -1) {
+                model.addModifier(modifierKeys[key]);
             } else if (key === 'dec') {
                 model.addDecimal();
             } else if (key === 'del') {

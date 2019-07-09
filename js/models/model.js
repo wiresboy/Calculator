@@ -26,11 +26,11 @@
 define({
     name: 'models/model',
     requires: [
-        'models/errors'
+        'models/errors'//,
+        //'models/math.min'
     ],
     def: function initView(errors) {
         'use strict';
-
         /**
          * Operators.
          *
@@ -39,8 +39,9 @@ define({
          * @const {string[]}
          */
         var OPERATORS = ['+', '-', '*', '/', '^'],
+        MODIFIERS = ['^2', '^3', '^-1', '!'], //Like an operator but only takes 1 parameter. "Modifies last argument"
         
-        FUNCTIONS = ['Math.sqrt(', 'Math.sin(', 'Math.cos(', 'Math.tan(', 'Math.asin(', 'Math.acos(', 'Math.atan(', 'Math.log(', 'Math.log10(', 'Math.pow(Math.E,', 'Math.pow(2,', 'E'],
+        FUNCTIONS = ['sqrt(', 'sin(', 'cos(', 'tan(', 'asin(', 'acos(', 'atan(', 'log(', 'log10(', 'pow(E,', 'pow(2,', 'E'],
 
             /**
              * Decimal separator.
@@ -236,6 +237,18 @@ define({
         }
 
         /**
+         * Returns true if specified value is a modifier, false otherwise.
+         *
+         * @memberof models/model
+         * @private
+         * @param {string} value
+         * @returns {boolean}
+         */
+        function isModifier(value) {
+            return MODIFIERS.indexOf(value) !== -1;
+        }
+        
+        /**
          * Returns true if specified value is a function, false otherwise.
          *
          * @memberof models/model
@@ -288,6 +301,10 @@ define({
         function isOpenBracket(val) {
         	return (val === BRACKET_OPEN);
         }
+
+        function isCloseBracket(val) {
+        	return (val === BRACKET_CLOSE);
+        }
         
         /**
          * Adds digit to equation.
@@ -311,7 +328,7 @@ define({
             // only start a new component,
             // unless there is only a minus before.
             if (
-                ((!last || isOperator(last)) || isBracket(last) || isFunction(last)) &&
+                ((!last || isOperator(last)) || isModifier(last) || isBracket(last) || isFunction(last)) &&
                 (last !== '-' || equation.length > 1)
             ) {
                 addComponent(digit);
@@ -366,7 +383,7 @@ define({
                 return;
             }
             if (last === '-' && isFunction(penultimate)) {
-            	return
+            	return;
             }
             //if last=='-' and penultimate is a function, then last could be overwritten to invalid operator. [like sqrt(- => sqrt(* ]
 
@@ -396,6 +413,39 @@ define({
         }
 
         /**
+         * Adds modifier to equation. Modifiers can go after closing brackets, modifier, and numbers only.
+         *
+         * @memberof models/model
+         * @public
+         * @param {string} operator
+         */
+        function addModifier(modifier) {
+            var last = null, penultimate = null;
+
+            if (calculated) {
+                resetEquation();
+                addComponent(lastCalculationResult);
+            }
+
+            last = getLastComponent(true);
+            penultimate = getPenultimateComponent(true);
+
+            // Operators cannot be added to empty equations
+            if (!last) {
+                return;
+            }
+            if (isNumeric(last) || isModifier(last) || isCloseBracket(last)) { //TODO: isNumeric is only checking for digits, not if its a valide number! Causes bugs when number is decimal or scientific notation
+            	replaceLastComponent(checkNegativeFormat(last));
+            	
+                // check for 'E' being the last character of the equation - if so don't add modifier
+                if (!(last && last.match(/E$/))) {
+                    // add modifier
+                    addComponent(modifier);
+                }
+            }
+        }
+
+        /**
          * Adds function to equation.
          * Functions can only come immediately after an operator or at the beginning of a equation.
          *
@@ -418,7 +468,7 @@ define({
                 addComponent(func);
                 return true;
             }
-            else {//previous must be either a number or a closing bracket. So: add a multiply and then the funtion.
+            else {//previous must be either a number, a modifier, or a closing bracket. So: add a multiply and then the funtion.
             	addOperator('*');
             	addComponent(func);
             }
@@ -433,7 +483,11 @@ define({
         function addDecimal() {
             var last = getLastComponent();
 
-            if (!last || isOperator(last)) {
+            if (!last || isOperator(last) || isModifier(last)) {
+                addComponent('0' + DECIMAL);
+            } 
+            else if (isFunction(last)) {
+                addComponent('*');
                 addComponent('0' + DECIMAL);
             } else {
                 replaceLastComponent(checkNegativeFormat(last));
@@ -500,7 +554,7 @@ define({
                 }
             } else if (last.length === 1 || last.match(/^\-[0-9]$/)) {
                 equation.pop();
-            } else if (isFunction(last)) {
+            } else if (isFunction(last) || isModifier(last)) {
             	equation.pop();
             }
             else {
@@ -693,7 +747,8 @@ define({
                 
                 console.log(evaluation);
 
-                result = eval('(' + evaluation + ')');
+                //result = eval('(' + evaluation + ')');
+                result = math.evaluate('(' + evaluation + ')');
                 if (Math.abs(result) < 1.0E-300) {
                     result = 0;
                 }
@@ -895,6 +950,7 @@ define({
             resetEquation: resetEquation,
             addOperator: addOperator,
             addFunction: addFunction,
+            addModifier: addModifier,
             addDecimal: addDecimal,
             deleteLast: deleteLast,
             changeSign: changeSign,

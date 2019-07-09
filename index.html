@@ -49,7 +49,7 @@
         <div id="advanced_numpad" class="hidden">
             <div id="key_c" class="key col-4 c darkblue"></div>
             <div id="key_rad_deg" class="key col-4 darkblue disabled">rad</div>
-            <div id="key_x_factorial" class="key col-4 disabled">x!</div>            
+            <div id="key_factorial" class="key col-4">x!</div>
             <div id="key_del" class="key long-tap-repeat col-4 darkblue"></div>
             
             <div id="key_sin" class="key col-4">sin</div>
@@ -62,10 +62,10 @@
             <div id="key_arctan" class="key col-4 super">tan<sup>-1</sup></div>
             <div id="key_log" class="key col-4">log</div>
             
-            <div id="key_inverse" class="key col-4 super disabled">x<sup>-1</sup></div>
-            <div id="key_x_2" class="key col-4 disabled">x²</div>
-            <div id="key_x_3" class="key col-4 disabled">x³</div>
-            <div id="key_x_y" class="key col-4 super disabled">x<sup>y</sup></div>
+            <div id="key_inverse" class="key col-4 super">x<sup>-1</sup></div><!--  TODO the super arg seems to make the bounding box weird... -->
+            <div id="key_x_2" class="key col-4">x²</div>
+            <div id="key_x_3" class="key col-4">x³</div>
+            <div id="key_x_y" class="key col-4 super">x<sup>y</sup></div>
 
             <div id="key_2exp" class="key col-3 left super">2<sup>x</sup></div>
             <div id="key_exp" class="key col-3 center super">e<sup>x</sup></div>
@@ -74,6 +74,7 @@
             <div id="key_eql" class="key equal col-1"></div>
         </div>
     </div>
+    <script src="js/models/math.min.js"></script>
     <script src="js/core/core.js" data-main="js/app.js"></script>
 </body>
 </html>
