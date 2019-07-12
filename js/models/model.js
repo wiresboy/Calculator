@@ -434,7 +434,7 @@ define({
             if (!last) {
                 return;
             }
-            if (isNumeric(last) || isModifier(last) || isCloseBracket(last)) { //TODO: isNumeric is only checking for digits, not if its a valide number! Causes bugs when number is decimal or scientific notation
+            if (isNumeric(last) || isModifier(last) || isCloseBracket(last)) {
             	replaceLastComponent(checkNegativeFormat(last));
             	
                 // check for 'E' being the last character of the equation - if so don't add modifier
@@ -825,7 +825,7 @@ define({
          * @returns {boolean}
          */
         function isNumeric(str) {
-            return /^\d+$/.test(str);
+            return /^[\d\.E∞-]+$/.test(str);
         }
 
         /**
