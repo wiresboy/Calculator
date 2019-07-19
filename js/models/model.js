@@ -14,7 +14,7 @@
  *      limitations under the License.
  */
 
-/*global define, console*/
+/*global define, console, math*/
 
 /**
  * Main view module.
@@ -40,7 +40,7 @@ define({
          */
         var OPERATORS = ['+', '-', '*', '/', '^'],
         MODIFIERS = ['^2', '^3', '^-1', '!'], //Like an operator but only takes 1 parameter. "Modifies last argument"
-        
+        OPERANDS = ['pi'],
         FUNCTIONS = ['sqrt(', 'sin(', 'cos(', 'tan(', 'asin(', 'acos(', 'atan(', 'log(', 'log10(', 'pow(E,', 'pow(2,', 'E'],
 
             /**
@@ -315,7 +315,7 @@ define({
          * @returns {boolean} True for success | false for fail.
          */
         function addDigit(digit) {
-            /*jshint maxcomplexity:11 */
+            /*jshint maxcomplexity:15 */
             var last = null;
 
             if (calculated) {
@@ -323,15 +323,22 @@ define({
             }
 
             last = getLastComponent();
+            
+            // if we cannot add a number directly, don't.
+            if ( isModifier(last) || isCloseBracket(last) || isConstant(last))
+            {
+            	return true;
+            }
 
             // If the previous one is not a number
             // only start a new component,
             // unless there is only a minus before.
             if (
-                ((!last || isOperator(last)) || isModifier(last) || isBracket(last) || isFunction(last)) &&
+                ((!last || isOperator(last)) || isBracket(last) || isFunction(last)) &&
                 (last !== '-' || equation.length > 1)
             ) {
                 addComponent(digit);
+                updateUndoLog();
                 return true;
             }
             replaceLastComponent(checkNegativeFormat(last));
@@ -354,6 +361,38 @@ define({
             }
             updateUndoLog();
             return false;
+        }
+
+        /**
+         * Adds constant to equation.
+         *
+         * @memberof models/model
+         * @public
+         * @param {string} digit
+         * @returns {boolean} True for success | false for fail.
+         */
+        function addConstant(constant) {
+            /*jshint maxcomplexity:11 */
+            var last = null;
+
+            if (calculated) {
+                resetEquation();
+            }
+
+            last = getLastComponent();
+            
+            // if we cannot add a constant directly, multiply and then add the constant.
+            if ( isModifier(last) || isCloseBracket(last) || isOperand(last))
+            {
+            	addComponent("*");
+            	addComponent(constant);
+            }
+
+            // If the previous one is operator or function
+            if ((!last || isOperator(last)) || isOpenBracket(last) || isFunction(last)) {
+                addComponent(constant);
+                return true;
+            }
         }
 
         /**
@@ -434,7 +473,7 @@ define({
             if (!last) {
                 return;
             }
-            if (isNumeric(last) || isModifier(last) || isCloseBracket(last)) {
+            if (isNumeric(last) || isModifier(last) || isCloseBracket(last) || isOperand(last)) {
             	replaceLastComponent(checkNegativeFormat(last));
             	
                 // check for 'E' being the last character of the equation - if so don't add modifier
@@ -554,7 +593,7 @@ define({
                 }
             } else if (last.length === 1 || last.match(/^\-[0-9]$/)) {
                 equation.pop();
-            } else if (isFunction(last) || isModifier(last)) {
+            } else if (isFunction(last) || isModifier(last) || isConstant(last)) {
             	equation.pop();
             }
             else {
@@ -829,6 +868,30 @@ define({
         }
 
         /**
+         * Checks if given string is a constant.
+         *
+         * @memberof models/model
+         * @private
+         * @param {string} str
+         * @returns {boolean}
+         */
+        function isConstant(str) {
+            return (OPERANDS.indexOf(str) !== -1);
+        }
+
+        /**
+         * Checks if given string is an operand (so variable "x", constant like "pi", or numeric value).
+         *
+         * @memberof models/model
+         * @private
+         * @param {string} str
+         * @returns {boolean}
+         */
+        function isOperand(str) {
+        	return isNumeric(str) || isConstant(str);
+        }
+        
+        /**
          * Adds bracket sign to equation.
          *
          * @memberof models/model
@@ -882,14 +945,13 @@ define({
                 addComponent(sign[i]);
             }
         }
-        
         function arraysEqual(a, b) {
-        	if (a === b) return true;
-        	if (a == null || b == null) return false;
-        	if (a.length != b.length) return false;
+        	if (a === b) { return true; }
+        	if (a == null || b == null) { return false; }
+        	if (a.length !== b.length) { return false; }
 
         	for (var i = 0; i < a.length; ++i) {
-        		if (a[i] !== b[i]) return false;
+        		if (a[i] !== b[i]) { return false; }
         	}
         	return true;
         }
@@ -916,7 +978,6 @@ define({
 
         /**
          * updates the undo log. 
-         * TODO: Limit 200 entries?
          *
          * @memberof models/model
          * @public
@@ -952,6 +1013,7 @@ define({
             addFunction: addFunction,
             addModifier: addModifier,
             addDecimal: addDecimal,
+            addConstant: addConstant,
             deleteLast: deleteLast,
             changeSign: changeSign,
             addBracket: addBracket,

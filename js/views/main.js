@@ -14,7 +14,7 @@
  *      limitations under the License.
  */
 
-/*global define, document, window,tizen, console*/
+/*global define, document, window, console*/
 
 /**
  * Main view module.
@@ -101,6 +101,7 @@ define({
                 '*': '&times;',
                 '/': '&divide;',
                 '^': '^',
+                'pi': 'π',
                 '^2'    : '²',
                 '^3'    : '³',
                 '^-1'   : '<sup>-1</sup>',
@@ -146,6 +147,17 @@ define({
                 'x_3'      : '^3',
                 'inverse'  : '^-1',
                 'factorial': '!'
+            },
+
+            /**
+             * Object that maps strings to the constants.
+             *
+             * @memberof views/main
+             * @private
+             * @type {object}
+             */
+            constantKeys = {
+                'π'      : 'pi'
             },
             
             /** 
@@ -498,7 +510,6 @@ define({
          * @param {object} key
          */
         function processKey(key) {
-            /*jshint maxcomplexity:11 */
             var keys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
             //if not operator/delete/backspace/sign   -> so basically digits 
@@ -522,6 +533,8 @@ define({
                 model.addFunction(functionKeys[key]);
             } else if (Object.keys(modifierKeys).indexOf(key) !== -1) {
                 model.addModifier(modifierKeys[key]);
+            } else if (Object.keys(constantKeys).indexOf(key) !== -1) {
+                model.addConstant(constantKeys[key]);
             } else if (key === 'dec') {
                 model.addDecimal();
             } else if (key === 'del') {
